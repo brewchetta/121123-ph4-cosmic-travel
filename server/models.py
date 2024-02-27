@@ -18,43 +18,54 @@ db = SQLAlchemy(metadata=metadata)
 
 
 class Planet(db.Model, SerializerMixin):
-    __tablename__ = 'planets'
+    __tablename__ = 'planets_table'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     distance_from_earth = db.Column(db.Integer)
     nearest_star = db.Column(db.String)
 
-    # Add relationship
+    missions = db.relationship("Mission", back_populates="planet")
+    scientists = association_proxy("missions", "scientist")
 
-    # Add serialization rules
+    serialize_rules = ("-missions.planet", "-scientists")
 
 
 class Scientist(db.Model, SerializerMixin):
-    __tablename__ = 'scientists'
+    __tablename__ = 'scientists_table'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     field_of_study = db.Column(db.String)
 
-    # Add relationship
+    missions = db.relationship("Mission", back_populates="scientist")
+    planets = association_proxy("missions", "planet")
 
-    # Add serialization rules
+    serialize_rules = ("-missions.scientist", "-planets")
 
-    # Add validation
+    @validates("name")
+    def validate_name(self, key, name):
+        if name and len(name) > 0:
+            return name
+        else:
+            raise ValueError("Name cannot be empty")
 
+    @validates("field_of_study")
+    def validate_field_of_study(self, key, field_of_study):
+        if field_of_study and len(field_of_study) > 0:
+            return field_of_study
+        else:
+            raise ValueError("Field of study cannot be empty")
 
 class Mission(db.Model, SerializerMixin):
-    __tablename__ = 'missions'
+    __tablename__ = 'missions_table'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
+    name = db.Column(db.String, nullable=False)
+    planet_id = db.Column(db.Integer, db.ForeignKey('planets_table.id'), nullable=False)
+    scientist_id = db.Column(db.Integer, db.ForeignKey('scientists_table.id'), nullable=False)
 
-    # Add relationships
+    scientist = db.relationship("Scientist", back_populates="missions")
+    planet = db.relationship("Planet", back_populates="missions")
 
-    # Add serialization rules
-
-    # Add validation
-
-
-# add any models you may need.
+    serialize_rules = ("-scientist.missions", "-planet.missions")
